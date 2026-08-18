@@ -688,4 +688,26 @@ BinHub:CreateToggle(Window, {
 
 -- TP VỀ VỊ TRÍ CLONE
 BinHub:CreateButton(Window, {
-    Name = "
+    
+    Name = ""TP Back To Clone",
+    BoxColor = Color3.fromRGB(35, 30, 20),
+    TextColor = Color3.fromRGB(255, 210, 70),
+    Callback = function()
+        TeleportToClone()
+    end
+})
+
+--==================================================
+-- NOTIFICATION
+--==================================================
+
+pcall(function()
+    game:GetService("StarterGui"):SetCore(
+        "SendNotification",
+        {
+            Title = "Bin Hub 1.1",
+            Text = "Bin Hub + Clone TP loaded!",
+            Duration = 3
+        }
+    )
+end)
