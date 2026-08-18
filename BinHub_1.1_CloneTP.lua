@@ -133,33 +133,45 @@ local function ToggleFloating()
 end
 
 --==================================================
--- AIMBOT
+-- AIMBOT V2
 --==================================================
 
-local function GetClosestPlayer()
+local AimbotFOV = 250
+local AimbotMaxDistance = 150
+local AimbotSmoothness = 0.18
+
+local function GetClosestPlayerV2()
     local ClosestPlayer = nil
-    local ShortestDistance = 36
+    local BestScore = math.huge
     local Character = LocalPlayer.Character
 
-    if Character and Character:FindFirstChild("HumanoidRootPart") then
-        local MyRoot = Character.HumanoidRootPart
+    if not Character then return nil end
 
-        for _, Player in pairs(Players:GetPlayers()) do
-            if Player ~= LocalPlayer
-                and Player.Character
-                and Player.Character:FindFirstChild("HumanoidRootPart")
-                and Player.Character:FindFirstChildOfClass("Humanoid") then
+    local MyRoot = Character:FindFirstChild("HumanoidRootPart")
+    if not MyRoot then return nil end
 
-                local EnemyRoot = Player.Character.HumanoidRootPart
-                local EnemyHumanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+    local Viewport = Camera.ViewportSize
+    local ScreenCenter = Vector2.new(Viewport.X / 2, Viewport.Y / 2)
 
-                if EnemyHumanoid.Health > 0 then
-                    local Distance =
-                        (MyRoot.Position - EnemyRoot.Position).Magnitude
+    for _, Player in ipairs(Players:GetPlayers()) do
+        if Player ~= LocalPlayer and Player.Character then
+            local Humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+            local Root = Player.Character:FindFirstChild("HumanoidRootPart")
+            local Head = Player.Character:FindFirstChild("Head")
 
-                    if Distance < ShortestDistance then
-                        ShortestDistance = Distance
-                        ClosestPlayer = Player
+            if Humanoid and Humanoid.Health > 0 and Root and Head then
+                local WorldDistance = (MyRoot.Position - Root.Position).Magnitude
+
+                if WorldDistance <= AimbotMaxDistance then
+                    local ScreenPos, OnScreen = Camera:WorldToViewportPoint(Head.Position)
+
+                    if OnScreen and ScreenPos.Z > 0 then
+                        local ScreenDistance = (Vector2.new(ScreenPos.X, ScreenPos.Y) - ScreenCenter).Magnitude
+
+                        if ScreenDistance <= AimbotFOV and ScreenDistance < BestScore then
+                            BestScore = ScreenDistance
+                            ClosestPlayer = Player
+                        end
                     end
                 end
             end
@@ -167,6 +179,21 @@ local function GetClosestPlayer()
     end
 
     return ClosestPlayer
+end
+
+local function UpdateAimbotV2()
+    if not AimbotActive then return end
+
+    local Target = GetClosestPlayerV2()
+    if not Target or not Target.Character then return end
+
+    local Head = Target.Character:FindFirstChild("Head")
+        or Target.Character:FindFirstChild("HumanoidRootPart")
+
+    if not Head then return end
+
+    local Desired = CFrame.new(Camera.CFrame.Position, Head.Position)
+    Camera.CFrame = Camera.CFrame:Lerp(Desired, AimbotSmoothness)
 end
 
 --==================================================
@@ -296,23 +323,7 @@ RunService.RenderStepped:Connect(function()
         end)
     end
 
-    if AimbotActive then
-        pcall(function()
-            local Target = GetClosestPlayer()
-
-            if Target
-                and Target.Character
-                and Target.Character:FindFirstChild("HumanoidRootPart") then
-
-                local TargetRoot = Target.Character.HumanoidRootPart
-
-                Camera.CFrame = CFrame.new(
-                    Camera.CFrame.Position,
-                    TargetRoot.Position
-                )
-            end
-        end)
-    end
+    pcall(UpdateAimbotV2)
 end)
 
 --==================================================
@@ -656,7 +667,7 @@ BinHub:CreateToggle(Window, {
 })
 
 BinHub:CreateToggle(Window, {
-    Name = "Aimbot Lock (36s)",
+    Name = "Aimbot V2",
     ActiveColor = Color3.fromRGB(255, 120, 200),
     Callback = function(Value)
         AimbotActive = Value
@@ -677,25 +688,4 @@ BinHub:CreateToggle(Window, {
 
 -- TP VỀ VỊ TRÍ CLONE
 BinHub:CreateButton(Window, {
-    Name = "TP Back To Clone",
-    BoxColor = Color3.fromRGB(35, 30, 20),
-    TextColor = Color3.fromRGB(255, 210, 70),
-    Callback = function()
-        TeleportToClone()
-    end
-})
-
---==================================================
--- NOTIFICATION
---==================================================
-
-pcall(function()
-    game:GetService("StarterGui"):SetCore(
-        "SendNotification",
-        {
-            Title = "Bin Hub 1.1",
-            Text = "Bin Hub + Clone TP loaded!",
-            Duration = 3
-        }
-    )
-end)
+    Name = "
